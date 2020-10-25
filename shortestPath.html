@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		<style>
+			table, tr, th, td{
+				border: 0.1px solid black;
+				text-align: center;
+				border-collapse: collapse;
+			}
+			div{
+				width: 18px;
+				height: 18px;
+			}
+		</style>
+			
+		<script>
+			var mapRow = 30;
+			var mapCol = 70;
+			var map = new Array(mapRow);
+			var index = "green";
+			var origin = [1, 1];
+			var moveY = [0, 0, 1, -1], moveX = [1, -1, 0, 0];
+			var id = null;
+			var onOff = false;
+			
+			function initialization()
+			{
+				var tab = document.getElementById("map");
+				for(var i = 0; i < mapRow; ++i)
+				{
+					map[i] = new Array(mapCol);
+					var tr = tab.insertRow(-1);
+					for(var j = 0; j < mapCol; ++j)
+					{
+						var td = tr.insertCell(-1);
+						td.innerHTML = "<div style='background-color: white;' onmousedown='pressDown(this)' onmouseover='OnOff(this)'></div>";	
+						map[i][j] = td.children[0];
+					}
+				}
+				
+				for(var i = 0; i < mapRow; ++i)
+				{
+					map[i][0].style.backgroundColor = "gray";
+					map[i][mapCol - 1].style.backgroundColor = "gray";
+					if(i == 0 || i == mapRow - 1)
+					{
+						for(var j = 1; j < mapCol - 1; ++j)
+						{
+							map[i][j].style.backgroundColor = "gray";
+						}
+					}
+				}				
+				map[1][1].style.backgroundColor = "green";					
+			}
+			
+			function OnOff(obj)
+			{
+				if(onOff)
+				{
+					pressDown(obj);
+				}
+			}
+			
+			function pressDown(obj)
+			{
+				if(index == "black" && obj.style.backgroundColor == "white")
+				{
+					obj.style.backgroundColor = "black";						
+				}
+				else if(index == "white" && obj.style.backgroundColor == "black")
+				{
+					obj.style.backgroundColor = "white";	
+				}
+				else if(index == "green")
+				{
+					var weight = shortestPath();
+					var path = new Array();
+					path.push([obj.parentNode.parentNode.rowIndex, obj.parentNode.cellIndex]);
+					if(weight[path[0][0]][path[0][1]] != Number.MAX_VALUE)
+					{
+						for(var i = 0; path[i][0] != origin[0] || path[i][1] != origin[1]; ++i)
+						{					
+							for(var j = 0; j < 4; ++j)
+							{
+								var y = path[i][0] + moveY[j];
+								var x = path[i][1] + moveX[j];			
+								if(weight[path[i][0]][path[i][1]] - 1 == weight[y][x])
+								{
+									path.push([y, x]);
+									break;
+								}
+							}	
+						}
+						clearInterval(id);
+						var i = path.length - 2;
+						id = setInterval(function (){
+							if(i >= 0)
+							{
+								move(path[i][0], path[i][1]);
+								--i;
+							}
+							else
+							{
+								clearInterval(id);
+							}
+						}, 50);				
+					}				
+				}
+			}
+			
+			function shortestPath()
+			{
+				var weight = new Array(mapRow);
+				for(var i = 0; i < mapRow; ++i)
+				{
+					weight[i] = new Array(mapCol);
+					for(var j = 0; j < mapCol; ++j)
+					{
+						weight[i][j] = Number.MAX_VALUE;
+					}
+				}
+				weight[origin[0]][origin[1]] = 0;
+				
+				var queue = new Array();
+				for(var pos = origin; pos != undefined; pos = queue.shift())
+				{
+					for(var i = 0; i < moveY.length; ++i)
+					{
+						var y = pos[0] + moveY[i];
+						var x = pos[1] + moveX[i];
+						if(map[y][x].style.backgroundColor == "white" && weight[pos[0]][pos[1]] + 1 < weight[y][x])
+						{
+							weight[y][x] = weight[pos[0]][pos[1]] + 1;
+							queue.push([y, x]);
+						}
+					}					
+				}
+				
+				return weight;
+			}
+			
+			function move(y, x)
+			{
+				map[origin[0]][origin[1]].style.backgroundColor = "white";
+				map[y][x].style.backgroundColor = "green";
+				origin[0] = y;
+				origin[1] = x;
+			}
+			
+		</script>		
+	</head>
+	<body onload="initialization()">
+		<table id="map" onmousedown="onOff = true" onmouseup="onOff = false"></table>		
+		<input type="button" value="添加障碍" onclick="index = 'black'"/>
+		<input type="button" value="移除障碍" onclick="index = 'white'"/>
+		<input type="button" value="移动" onclick="index = 'green'" />
+	</body>
+</html>
