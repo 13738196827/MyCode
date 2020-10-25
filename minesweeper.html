@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title></title>
+		
+		<style>
+			table, tr, th, td{
+				border: 0.1px solid black;
+				text-align: center;
+				border-collapse: collapse;
+			}
+			div{
+				width: 20px;
+				height: 20px;
+			}
+		</style>
+		
+		<script src="js/jquery-3.4.1.min.js"></script>
+		<script>
+			var Y;
+			var X;
+			var BOMB;
+			var bombMap;
+			var map;
+			var mode = 0;//0为一般模式 1为插旗模式
+			var isFirst;//为第一次按下
+			
+			
+			$(init);
+			function init()
+			{
+				Y = parseInt(document.getElementById("y").value);
+				X = parseInt(document.getElementById("x").value);
+				BOMB = parseInt(document.getElementById("bomb").value);
+				if(Y <= 0 || X <= 0 || (Y * X) / 2 <= BOMB)
+				{
+					alert("炸弹或长宽不符合要求");
+					return;
+				}
+				Y += 2;
+				X += 2;
+				bombMap = new Array(Y);
+				map = new Array(Y);
+				isFirst = true;//为第一次按下
+								
+				var tab = document.getElementById("map");
+				tab.innerHTML = "";//清空所有内容
+				for(var i = 0; i < Y; ++i)//可视界面矩阵 雷区矩阵初始化
+				{
+					bombMap[i] = new Array(X);
+					map[i] = new Array(X);
+					var tr = tab.insertRow(-1);
+					for(var j = 0; j < X; ++j)
+					{
+						var td = tr.insertCell(-1);
+						td.innerHTML = "<div style='background-color: white;' onclick='tap(" + i + "," + j + ")' ></div>";	
+						bombMap[i][j] = 0;
+						map[i][j] = td.children[0];
+					}
+				}
+				
+					
+				for(var i = 0; i < Y; ++i)//初始化边框
+				{
+					map[i][0].style.backgroundColor = "black";
+					map[i][X - 1].style.backgroundColor = "black";
+					bombMap[i][0]= -10;
+					bombMap[i][X - 1]= -10;
+					if(i == 0 || i == Y - 1)
+					{
+						for(var j = 1; j < X - 1; ++j)
+						{						
+							map[i][j].style.backgroundColor = "black";
+							bombMap[i][j]= -10;
+						}
+					}
+				}	
+				
+			}	
+			
+					
+			function tap(y, x)
+			{
+				var jq = $(map[y][x]);
+				if(mode == 0)
+				{
+					if(isFirst)
+					{
+						for(var i = 0; i < BOMB; ++i)//布雷
+						{
+							var	py = parseInt(Math.random() * (Y - 2)) + 1;
+							var	px = parseInt(Math.random() * (X - 2)) + 1;
+							/*
+							while(bombMap[py][px] || (py == y && px == x
+							|| py == y + 1 && px == x
+							|| py == y - 1 && px == x
+							|| py == y && px == x + 1
+							|| py == y && px == x - 1
+							|| py == y + 1 && px == x + 1
+							|| py == y + 1 && px == x - 1
+							|| py == y - 1 && px == x + 1
+							|| py == y - 1 && px == x - 1))//如果该位置已经有雷则再次获得一次随机数
+							*/
+							while(bombMap[py][px] == -1 || (py == y && px == x))//如果该位置已经有雷则再次获得一次随机数
+							{
+								py = parseInt(Math.random() * (Y - 2)) + 1;
+								px = parseInt(Math.random() * (X - 2)) + 1;
+							}
+							bombMap[py][px] = -1;	
+							bombMap[py + 1][px] += bombMap[py + 1][px] >= 0 ? 1 : 0;
+							bombMap[py - 1][px] += bombMap[py - 1][px] >= 0 ? 1 : 0;
+							bombMap[py][px + 1] += bombMap[py][px + 1] >= 0 ? 1 : 0;
+							bombMap[py][px - 1] += bombMap[py][px - 1] >= 0 ? 1 : 0;
+							bombMap[py + 1][px + 1] += bombMap[py + 1][px + 1] >= 0 ? 1 : 0;
+							bombMap[py + 1][px - 1] += bombMap[py + 1][px - 1] >= 0 ? 1 : 0;
+							bombMap[py - 1][px + 1] += bombMap[py - 1][px + 1] >= 0 ? 1 : 0;
+							bombMap[py - 1][px - 1] += bombMap[py - 1][px - 1] >= 0 ? 1 : 0;				
+						}
+						
+
+						isFirst = false;
+					}
+					
+					if(jq.css("backgroundColor") == "rgb(255, 255, 255)")
+					{	
+						if(bombMap[y][x] == -1)
+						{
+							jq.css({"backgroundColor": "red"});
+							gameOver();
+						}					
+						else if(bombMap[y][x] == 0)
+						{
+							dfs(y, x);
+						}
+						else
+						{
+							jq.css({"backgroundColor": "rgb(128, 128, 128)"});
+							jq.text(bombMap[y][x]);
+						}			
+					}
+				}
+				else if(mode == 1)//插旗模式	
+				{
+					if(jq.css("backgroundColor") == "rgb(255, 255, 255)")
+					{	
+						jq.css({"backgroundColor": "rgb(255, 255, 0)"});
+					}
+					else if(jq.css("backgroundColor") == "rgb(255, 255, 0)")
+					{
+						jq.css({"backgroundColor": "rgb(255, 255, 255)"});
+					}
+					else if(jq.css("backgroundColor") == "rgb(128, 128, 128)")
+					{
+						var count = 0
+						if($(map[y + 1][x]).css("backgroundColor") == "rgb(255, 255, 0)") count++;
+						if($(map[y - 1][x]).css("backgroundColor") == "rgb(255, 255, 0)") count++;
+						if($(map[y][x + 1]).css("backgroundColor") == "rgb(255, 255, 0)") count++;
+						if($(map[y][x - 1]).css("backgroundColor") == "rgb(255, 255, 0)") count++;
+						if($(map[y + 1][x + 1]).css("backgroundColor") == "rgb(255, 255, 0)") count++;
+						if($(map[y + 1][x - 1]).css("backgroundColor") == "rgb(255, 255, 0)") count++;
+						if($(map[y - 1][x + 1]).css("backgroundColor") == "rgb(255, 255, 0)") count++;
+						if($(map[y - 1][x - 1]).css("backgroundColor") == "rgb(255, 255, 0)") count++;
+						
+						if(count == jq.text())//周围方向旗数等于已点击方格上的数字则翻开周围所有白色方块
+						{
+							mode = 0;
+							tap(y + 1, x);
+							tap(y - 1, x);
+							tap(y, x + 1);
+							tap(y, x - 1);
+							tap(y + 1, x + 1);
+							tap(y + 1, x - 1);
+							tap(y - 1, x + 1);
+							tap(y - 1, x - 1);
+							mode = 1;
+						}
+					}
+				}
+
+			}
+			
+			function dfs(y, x)
+			{
+				var jq = $(map[y][x]);
+				if(jq.css("backgroundColor") == "rgb(255, 255, 255)" && bombMap[y][x] >= 0)
+				{
+					jq.css({"backgroundColor": "gray"});
+					if(bombMap[y][x] != 0) jq.text(bombMap[y][x]);					
+					if(bombMap[y][x] == 0)
+					{
+						dfs(y + 1, x);
+						dfs(y - 1, x);
+						dfs(y, x + 1);
+						dfs(y, x - 1);
+						dfs(y + 1, x + 1);
+						dfs(y + 1, x - 1);
+						dfs(y - 1, x + 1);
+						dfs(y - 1, x - 1);	
+					}
+				}			
+			}
+			
+			function gameOver()
+			{
+				for(var i = 0; i < Y; ++i)//可视界面矩阵 雷区矩阵初始化
+				{
+					for(var j = 0; j < X; ++j)
+					{
+						if(bombMap[i][j] == -1)
+						{
+							$(map[i][j]).css({"backgroundColor": "red"});
+						}
+					}
+				}
+				alert("游戏结束");
+			}
+			
+			
+		</script>
+	</head>
+	<body>
+		当前模式：<input type="test" id="mode" value="普通模式" readonly="readonly"/>
+		<table id="map" ></table>
+		长度：<input type="number" id="y" value="30"/>
+		宽度：<input type="number" id="x" value="50"/>
+		地雷数：<input type="number" id="bomb" value="100"/>
+		<input type="button" value="普通模式" onclick="mode = 0; document.getElementById('mode').value = '普通模式';"/>
+		<input type="button" value="插旗模式" onclick="mode = 1; document.getElementById('mode').value = '插旗模式';"/>
+		<input type="button" value="重新开始" onclick="init();"/>
+	</body>
+</html>
